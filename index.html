@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Wedding Gallery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Inter&display=swap"
+    rel="stylesheet">
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #faf7f4;
+      text-align: center;
+      padding: 40px 20px;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: white;
+      max-width: 480px;
+      margin: 20px auto 40px;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    input[type=file] {
+      margin: 20px 0;
+    }
+
+    button {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: #b89b72;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 0.95rem;
+    }
+
+    .gallery-wrapper {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .gallery-grid img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Upload Form -->
+  <section id="upload-section" class="card">
+    <h1>Help Us Relive the Day 💍</h1>
+    <p>Select photos or short videos to upload.</p>
+    <input type="file" id="fileInput" accept="image/*,video/*" multiple>
+    <br>
+    <button id="uploadBtn">Upload</button>
+    <div class="status" id="status"></div>
+  </section>
+
+  <!-- Gallery Section -->
+  <section class="gallery-wrapper">
+    <h1>Gallery</h1>
+    <p>A collection of moments shared by everyone who celebrated with us.</p>
+    <div id="gallery" class="gallery-grid"></div>
+  </section>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyt-UGrZwkoTJwlbUOYGnDAEUbycu16TYH_usG_a1npV_9xRF6AZJTPGf5kVLwj2jIfNg/exec'
+
+    // Upload Function
+    function uploadFile() {
+      const fileInput = document.getElementById("fileInput");
+      const status = document.getElementById("status");
+
+      const files = fileInput.files;
+      if (!files.length) {
+        status.textContent = "Please select a file.";
+        return;
+      }
+
+      status.textContent = `Uploading ${files.length} file${files.length > 1 ? 's' : ''}… please keep this page open.`;
+
+      let completed = 0;
+      let errors = [];
+      const promises = Array.from(files).map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result.split(",")[1];
+
+            fetch(SCRIPT_URL, {
+              method: "POST",
+              mode: 'cors',
+              headers: {
+                "Content-Type": "text/plain"
+              },
+              body: JSON.stringify({
+                file: base64,
+                fileName: file.name,
+                mimeType: file.type
+              })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) resolve();
+              else reject(new Error(`Upload failed: ${data.error || 'Unknown error'}`));
+            })
+            .catch(err => reject(err));
+          };
+          reader.readAsDataURL(file);
+        }).then(() => {
+          completed++;
+          status.textContent = `Uploading… ${completed}/${files.length} complete.`;
+        }).catch(err => {
+          completed++;
+          errors.push(err.message);
+          status.textContent = `Uploading… ${completed}/${files.length} complete (with errors).`;
+        });
+      });
+
+      Promise.allSettled(promises).then(() => {
+        if (errors.length === 0) {
+          status.textContent = "All uploads complete! Thank you ❤️";
+        } else {
+          status.textContent = `Uploads complete with errors: ${errors.join('; ')}`;
+        }
+        fileInput.value = "";
+        loadGallery(); // Reload gallery after uploads
+      });
+    }
+
+ function loadGallery() {
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = 'Please wait while images are being fetched...';
+
+  fetch(SCRIPT_URL + '?action=list', {
+    method: "GET",
+    mode: 'cors'
+  })
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+    if (data.success && data.images.length > 0) {
+      gallery.innerHTML = '';
+      data.images.forEach(img => {
+        const imgElement = document.createElement('img');
+        imgElement.src = `https://drive.google.com/thumbnail?id=${img.id}`;  // Thumbnail for faster load; use /uc?id= for full
+        imgElement.alt = img.name;
+        imgElement.title = img.name;  // Hover tooltip
+        gallery.appendChild(imgElement);
+      });
+      
+    } else {
+      gallery.innerHTML = '<p>No images found or error: ' + (data.error || 'Unknown') + '</p>';
+    }
+  })
+  .catch(err => {
+    gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("uploadBtn").addEventListener("click", uploadFile);
+  loadGallery();
+});
+  </script>
+
+</body>
+
+</html>
