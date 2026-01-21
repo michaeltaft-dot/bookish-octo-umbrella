@@ -6,45 +6,73 @@
   <title>Wedding Gallery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Inter&display=swap"
-    rel="stylesheet">
+  <!-- Fonts -->
+  <link href='https://fonts.googleapis.com/css?family=Prata' rel='stylesheet'>
 
   <style>
+    /* Global Styles */
     body {
-      font-family: system-ui, sans-serif;
-      background: #faf7f4;
-      text-align: center;
-      padding: 40px 20px;
+      font-family: 'Prata', system-ui, sans-serif;
+      background: #fffaf6;
+      color: #333;
       margin: 0;
+      padding: 0;
+      text-align: center;
     }
 
-    h1 {
-      font-size: 2.2rem;
-      margin-bottom: 10px;
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Prata', serif;
+      color: #b89b72;
+      margin: 0 0 12px;
     }
 
+    p {
+      color: #555;
+      margin: 4px 0 16px;
+    }
+
+    /* Container Cards */
     .card {
-      background: white;
-      max-width: 480px;
-      margin: 20px auto 40px;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      background: #ffffff;
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 35px 25px;
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s;
     }
 
+    .card:hover {
+      transform: translateY(-3px);
+    }
+
+    /* Upload Form */
     input[type=file] {
       margin: 20px 0;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      cursor: pointer;
     }
 
     button {
       display: inline-block;
-      padding: 12px 24px;
-      border-radius: 999px;
+      padding: 14px 28px;
+      border-radius: 50px;
       background: #b89b72;
       color: #fff;
       border: none;
       cursor: pointer;
       font-weight: 500;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #a6865f;
     }
 
     button:disabled {
@@ -55,39 +83,70 @@
     .status {
       margin-top: 20px;
       font-size: 0.95rem;
+      color: #444;
     }
 
+    /* Gallery */
     .gallery-wrapper {
       max-width: 1100px;
       margin: 40px auto;
-      padding: 20px;
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      padding: 30px 20px;
+      background: #fffdf9;
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
     }
 
     .gallery-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-      margin-top: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
     }
 
     .gallery-grid img {
       width: 100%;
-      height: auto;
+      height: 160px;
       object-fit: cover;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+      border-radius: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      border: 2px solid #f0ede9;
+    }
+
+    .gallery-grid img:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Responsive Typography */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      .card {
+        margin: 30px 15px;
+        padding: 25px 15px;
+      }
+
+      .gallery-grid img {
+        height: 140px;
+      }
     }
   </style>
 </head>
+
+<div id="lightbox" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+    background: rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:1000;">
+  <img id="lightbox-img"
+    style="max-width:90%; max-height:90%; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.5);">
+</div>
 
 <body>
 
   <!-- Upload Form -->
   <section id="upload-section" class="card">
-    <h1>Help Us Relive the Day 💍</h1>
+    <h1>Help Us Relive the Day!</h1>
     <p>Select photos or short videos to upload.</p>
     <input type="file" id="fileInput" accept="image/*,video/*" multiple>
     <br>
@@ -138,12 +197,12 @@
                 mimeType: file.type
               })
             })
-            .then(res => res.json())
-            .then(data => {
-              if (data.success) resolve();
-              else reject(new Error(`Upload failed: ${data.error || 'Unknown error'}`));
-            })
-            .catch(err => reject(err));
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) resolve();
+                else reject(new Error(`Upload failed: ${data.error || 'Unknown error'}`));
+              })
+              .catch(err => reject(err));
           };
           reader.readAsDataURL(file);
         }).then(() => {
@@ -167,42 +226,51 @@
       });
     }
 
- function loadGallery() {
-  const gallery = document.getElementById("gallery");
-  gallery.innerHTML = 'Please wait while images are being fetched...';
+    function loadGallery() {
+      const gallery = document.getElementById("gallery");
+      gallery.innerHTML = 'Please wait while images are being fetched...';
 
-  fetch(SCRIPT_URL + '?action=list', {
-    method: "GET",
-    mode: 'cors'
-  })
-  .then(res => {
-    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
-    return res.json();
-  })
-  .then(data => {
-    if (data.success && data.images.length > 0) {
-      gallery.innerHTML = '';
-      data.images.forEach(img => {
-        const imgElement = document.createElement('img');
-        imgElement.src = `https://drive.google.com/thumbnail?id=${img.id}`;  // Thumbnail for faster load; use /uc?id= for full
-        imgElement.alt = img.name;
-        imgElement.title = img.name;  // Hover tooltip
-        gallery.appendChild(imgElement);
-      });
-      
-    } else {
-      gallery.innerHTML = '<p>No images found or error: ' + (data.error || 'Unknown') + '</p>';
+      fetch(SCRIPT_URL, {
+        method: "GET",
+        mode: 'cors'
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          if (data.success && data.images.length > 0) {
+            gallery.innerHTML = '';
+            data.images.forEach(img => {
+              const imgElement = document.createElement('img');
+              imgElement.src = `https://drive.google.com/thumbnail?id=${img.id}`;  // Thumbnail for faster load; use /uc?id= for full
+              imgElement.alt = img.name;
+              imgElement.style.cursor = "pointer";
+              imgElement.addEventListener('click', () => {
+                const lightbox = document.getElementById('lightbox');
+                const lightboxImg = document.getElementById('lightbox-img');
+                lightboxImg.src = `https://drive.google.com/thumbnail?id=${img.id}&sz=w2000`;  // Full-quality
+                lightbox.style.display = 'flex';
+              });
+              gallery.appendChild(imgElement);
+            });
+
+          } else {
+            gallery.innerHTML = '<p>No images found or error: ' + (data.error || 'Unknown') + '</p>';
+          }
+        })
+        .catch(err => {
+          gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
+        });
     }
-  })
-  .catch(err => {
-    gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
-  });
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("uploadBtn").addEventListener("click", uploadFile);
-  loadGallery();
-});
+    const lightbox = document.getElementById('lightbox');
+    lightbox.addEventListener('click', () => {
+      lightbox.style.display = 'none';
+    });
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("uploadBtn").addEventListener("click", uploadFile);
+      loadGallery();
+    });
   </script>
 
 </body>
