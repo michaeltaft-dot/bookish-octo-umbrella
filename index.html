@@ -243,7 +243,7 @@
             gallery.innerHTML = '';
             data.images.forEach(img => {
               const imgElement = document.createElement('img');
-              imgElement.src = `https://drive.google.com/thumbnail?id=${img.id}`;  // Thumbnail for faster load; use /uc?id= for full
+              imgElement.src = `https://drive.google.com/thumbnail?id=${img.id}&sz=w300`;  // Thumbnail for faster load; use /uc?id= for full
               imgElement.alt = img.name;
               imgElement.style.cursor = "pointer";
               imgElement.addEventListener('click', () => {
