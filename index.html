@@ -138,38 +138,61 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0, 0, 0, 0.85);
       justify-content: center;
       align-items: center;
       z-index: 1000;
+      flex-direction: column;
+      padding-top: 80px;
+      box-sizing: border-box;
     }
 
     #lightbox-content {
       position: relative;
       max-width: 95vw;
-      max-height: 95vh;
+      max-height: calc(95vh - 80px);
       overflow: auto;
       display: flex;
       justify-content: center;
       align-items: center;
       border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
     }
 
-    #lightbox-content img {
+    #lightbox-content img,
+    #lightbox-content video,
+    #lightbox-content iframe {
       max-width: 100%;
-      max-height: 90vh;
+      max-height: 100%;
       width: auto;
       height: auto;
       object-fit: contain;
       border-radius: 12px;
-      display: block;
+    }
+
+    #downloadBtn {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1010;
+      padding: 12px 28px;
+      border-radius: 50px;
+      background: #b89b72;
+      color: white;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
   </style>
 </head>
 
 <body>
-  <div id="lightbox" >
+  <div id="lightbox">
+    <button id="downloadBtn">
+      Download
+    </button>
     <div id="lightbox-content">
     </div>
   </div>
@@ -280,6 +303,7 @@
               imgElement.addEventListener('click', () => {
                 const lightbox = document.getElementById('lightbox');
                 const lightboxContent = document.getElementById('lightbox-content');
+                let downloadUrl = `https://drive.google.com/uc?export=download&id=${file.id}`;
 
                 if (file.mimeType.startsWith("image/")) {
                   lightboxContent.innerHTML = `<img src="https://drive.google.com/thumbnail?id=${file.id}&sz=h2000">`;
@@ -290,7 +314,16 @@
                       allow="autoplay">
                     </iframe>`;
                 }
+
                 lightbox.style.display = 'flex';
+                downloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = file.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  };
               });
 
               gallery.appendChild(imgElement);
@@ -300,17 +333,18 @@
           }
         })
 
-      .catch (err => {
-        gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
-      });
+        .catch(err => {
+          gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
+        });
     }
+
+    loadGallery();
     const lightbox = document.getElementById('lightbox');
     lightbox.addEventListener('click', () => {
       lightbox.style.display = 'none';
     });
     window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("uploadBtn").addEventListener("click", uploadFile);
-      loadGallery();
     });
   </script>
 
