@@ -105,7 +105,7 @@
 
     .gallery-grid img {
       width: 100%;
-      height: 160px;
+      aspect-ratio: 4 / 3;
       object-fit: cover;
       border-radius: 12px;
       transition: transform 0.2s, box-shadow 0.2s;
@@ -133,16 +133,46 @@
         height: 140px;
       }
     }
+
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #lightbox-content {
+      position: relative;
+      max-width: 95vw;
+      max-height: 95vh;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+
+    #lightbox-content img {
+      max-width: 100%;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 12px;
+      display: block;
+    }
   </style>
 </head>
 
-<div id="lightbox" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-    background: rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:1000;">
-  <img id="lightbox-img"
-    style="max-width:90%; max-height:90%; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.5);">
-</div>
-
 <body>
+  <div id="lightbox" >
+    <div id="lightbox-content">
+    </div>
+  </div>
 
   <!-- Upload Form -->
   <section id="upload-section" class="card">
@@ -168,8 +198,8 @@
     function uploadFile() {
       const fileInput = document.getElementById("fileInput");
       const status = document.getElementById("status");
-
       const files = fileInput.files;
+
       if (!files.length) {
         status.textContent = "Please select a file.";
         return;
@@ -241,27 +271,38 @@
         .then(data => {
           if (data.success && data.images.length > 0) {
             gallery.innerHTML = '';
-            data.images.forEach(img => {
+            data.images.forEach(file => {
               const imgElement = document.createElement('img');
-              imgElement.src = `https://drive.google.com/thumbnail?id=${img.id}&sz=w300`;  // Thumbnail for faster load; use /uc?id= for full
-              imgElement.alt = img.name;
+              imgElement.src = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`;
+              imgElement.alt = file.name;
               imgElement.style.cursor = "pointer";
+
               imgElement.addEventListener('click', () => {
                 const lightbox = document.getElementById('lightbox');
-                const lightboxImg = document.getElementById('lightbox-img');
-                lightboxImg.src = `https://drive.google.com/thumbnail?id=${img.id}&sz=w2000`;  // Full-quality
+                const lightboxContent = document.getElementById('lightbox-content');
+
+                if (file.mimeType.startsWith("image/")) {
+                  lightboxContent.innerHTML = `<img src="https://drive.google.com/thumbnail?id=${file.id}&sz=h2000">`;
+                } else {
+                  lightboxContent.innerHTML = `<iframe
+                      src="https://drive.google.com/file/d/${file.id}/preview"
+                      style="width:90vw; height:90vh; border:none; border-radius:12px;"
+                      allow="autoplay">
+                    </iframe>`;
+                }
                 lightbox.style.display = 'flex';
               });
-              gallery.appendChild(imgElement);
-            });
 
+              gallery.appendChild(imgElement);
+            })
           } else {
             gallery.innerHTML = '<p>No images found or error: ' + (data.error || 'Unknown') + '</p>';
           }
         })
-        .catch(err => {
-          gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
-        });
+
+      .catch (err => {
+        gallery.innerHTML = '<p>Error loading gallery: ' + err.message + '</p>';
+      });
     }
     const lightbox = document.getElementById('lightbox');
     lightbox.addEventListener('click', () => {
